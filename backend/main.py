@@ -1,0 +1,216 @@
+"""
+Servidor FastAPI para o sistema de estudo de idiomas.
+Fornece endpoints para carregar e validar os dados da aplicação.
+"""
+import os
+import json
+from pathlib import Path
+from typing import List
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
+from dotenv import load_dotenv
+
+from models import (
+    ConhecimentoIdioma,
+    ColecaoPrompts,
+    HistoricoPratica,
+    FrasesDialogo
+)
+
+# Carregar variáveis de ambiente
+load_dotenv()
+
+# Configuração
+BACKEND_PORT = int(os.getenv("BACKEND_PORT", 4010))
+PUBLIC_DIR = Path("public")
+
+# Criar aplicação FastAPI
+app = FastAPI(
+    title="API de Estudo de Idiomas",
+    description="API para gerenciar conhecimentos, prompts, histórico e diálogos",
+    version="1.0.0"
+)
+
+
+def carregar_json(caminho: Path):
+    """Carrega e retorna dados de um arquivo JSON."""
+    try:
+        with open(caminho, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Arquivo não encontrado: {caminho}"
+        )
+    except json.JSONDecodeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao decodificar JSON: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao ler arquivo: {str(e)}"
+        )
+
+
+@app.get("/")
+def root():
+    """Endpoint raiz com informações da API."""
+    return {
+        "mensagem": "API de Estudo de Idiomas",
+        "versao": "1.0.0",
+        "endpoints": {
+            "base_de_conhecimento": "/api/base_de_conhecimento",
+            "prompts": "/api/prompts",
+            "historico_de_pratica": "/api/historico_de_pratica",
+            "frases_do_dialogo": "/api/frases_do_dialogo"
+        }
+    }
+
+
+@app.get("/api/base_de_conhecimento", response_model=List[ConhecimentoIdioma])
+def get_base_de_conhecimento():
+    """
+    Carrega e valida a base de conhecimento de idiomas.
+    
+    Returns:
+        Lista de conhecimentos de idiomas validados.
+    
+    Raises:
+        HTTPException: Se o arquivo não existir, estiver vazio ou inválido.
+    """
+    caminho = PUBLIC_DIR / "[BASE] Conhecimento de idiomas.json"
+    dados = carregar_json(caminho)
+    
+    # Validar que não está vazio
+    if not dados or len(dados) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Base de conhecimento não pode estar vazia"
+        )
+    
+    # Validar cada item contra o modelo Pydantic
+    try:
+        conhecimentos = [ConhecimentoIdioma(**item) for item in dados]
+        return conhecimentos
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Erro de validação: {e.errors()}"
+        )
+
+
+@app.get("/api/prompts", response_model=ColecaoPrompts)
+def get_prompts():
+    """
+    Carrega e valida a coleção de prompts.
+    
+    Returns:
+        Coleção de prompts validada.
+    
+    Raises:
+        HTTPException: Se o arquivo não existir, estiver vazio ou inválido.
+    """
+    caminho = PUBLIC_DIR / "[BASE] Prompts.json"
+    dados = carregar_json(caminho)
+    
+    # Validar que não está vazio
+    if not dados:
+        raise HTTPException(
+            status_code=400,
+            detail="Coleção de prompts não pode estar vazia"
+        )
+    
+    # Validar contra o modelo Pydantic
+    try:
+        colecao = ColecaoPrompts(**dados)
+        return colecao
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Erro de validação: {e.errors()}"
+        )
+
+
+@app.get("/api/historico_de_pratica", response_model=HistoricoPratica)
+def get_historico_de_pratica():
+    """
+    Carrega e valida o histórico de prática.
+    Se o arquivo não existir, retorna um histórico vazio.
+    
+    Returns:
+        Histórico de prática validado.
+    
+    Raises:
+        HTTPException: Se o arquivo existir mas estiver inválido.
+    """
+    caminho = PUBLIC_DIR / "[BASE] Histórico de Prática.json"
+    
+    # Se não existir, retornar histórico vazio
+    if not caminho.exists():
+        return HistoricoPratica(exercicios=[])
+    
+    dados = carregar_json(caminho)
+    
+    # Validar que não está vazio (se existir, não pode estar vazio)
+    if not dados:
+        raise HTTPException(
+            status_code=400,
+            detail="Histórico de prática existe mas está vazio"
+        )
+    
+    # Validar contra o modelo Pydantic
+    try:
+        historico = HistoricoPratica(**dados)
+        return historico
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Erro de validação: {e.errors()}"
+        )
+
+
+@app.get("/api/frases_do_dialogo", response_model=FrasesDialogo)
+def get_frases_do_dialogo():
+    """
+    Carrega e valida as frases do diálogo.
+    
+    Returns:
+        Frases do diálogo validadas.
+    
+    Raises:
+        HTTPException: Se o arquivo não existir, estiver vazio ou inválido.
+    """
+    caminho = PUBLIC_DIR / "[BASE] Frases do Diálogo.json"
+    dados = carregar_json(caminho)
+    
+    # Validar que não está vazio
+    if not dados:
+        raise HTTPException(
+            status_code=400,
+            detail="Frases do diálogo não podem estar vazias"
+        )
+    
+    # Validar contra o modelo Pydantic
+    try:
+        frases = FrasesDialogo(**dados)
+        return frases
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Erro de validação: {e.errors()}"
+        )
+
+
+if __name__ == "__main__":
+    import uvicorn
+    
+    print(f"Iniciando servidor na porta {BACKEND_PORT}...")
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=BACKEND_PORT,
+        reload=True
+    )
