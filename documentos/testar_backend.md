@@ -2,20 +2,35 @@
 
 Este documento descreve como realizar os testes do backend do sistema de estudo de idiomas.
 
+## Visão Geral
+
+O backend possui três tipos de testes:
+
+1. **Validação de Arquivos JSON** - Valida estrutura e dados dos arquivos
+2. **Testes de API** - Testa endpoints do servidor FastAPI
+3. **Testes Manuais** - Testes interativos via Python REPL
+
 ## Pré-requisitos
 
 - Python 3.8 ou superior
-- Pydantic 2.x instalado
+- Dependências instaladas
 
 ### Instalação de Dependências
 
 ```bash
-pip install pydantic
+pip install -r backend/requirements.txt
 ```
 
-## 1. Validação de Arquivos JSON
+Isso instala:
+- pydantic (validação de dados)
+- fastapi (framework web)
+- uvicorn (servidor)
+- pytest (testes automatizados)
+- httpx (cliente HTTP para testes)
 
-### Validar Todos os Arquivos
+## PARTE 1: Validação de Arquivos JSON
+
+### 1.1. Validar Todos os Arquivos
 
 Execute o validador para verificar se todos os arquivos JSON estão corretos:
 
@@ -23,7 +38,7 @@ Execute o validador para verificar se todos os arquivos JSON estão corretos:
 python backend/validator.py
 ```
 
-### Saída Esperada
+### 1.2. Saída Esperada
 
 Se todos os arquivos estiverem válidos:
 
@@ -33,11 +48,8 @@ VALIDAÇÃO DE ARQUIVOS JSON
 ======================================================================
 
 ✓ VÁLIDO: [BASE] Conhecimento de idiomas.json
-
 ✓ VÁLIDO: [BASE] Prompts.json
-
 ✓ VÁLIDO: [BASE] Histórico de Prática.json
-
 ✓ VÁLIDO: [BASE] Frases do Diálogo.json
 
 ======================================================================
@@ -54,7 +66,85 @@ Se houver erros, serão exibidos detalhes:
     - Item 5: Invalid UUID format
 ```
 
-## 2. Testes dos Modelos Pydantic
+### 1.3. Arquivos Validados
+
+| Arquivo | Obrigatório | Pode estar vazio? |
+|---------|-------------|-------------------|
+| [BASE] Conhecimento de idiomas.json | Sim | Não |
+| [BASE] Prompts.json | Sim | Não |
+| [BASE] Histórico de Prática.json | Não (opcional) | Não (se existir) |
+| [BASE] Frases do Diálogo.json | Sim | Não |
+
+## PARTE 2: Testes Automatizados da API
+
+### 2.1. Executar Todos os Testes
+
+```bash
+pytest backend/test_api.py -v
+```
+
+Ou use o script auxiliar:
+
+```bash
+run_tests.bat
+```
+
+### 2.2. Saída Esperada
+
+```
+================================ test session starts =================================
+collected 50 items
+
+backend/test_api.py::TestEndpointRaiz::test_raiz_retorna_200 PASSED           [  2%]
+backend/test_api.py::TestEndpointRaiz::test_raiz_retorna_json PASSED          [  4%]
+...
+backend/test_api.py::TestDocumentacao::test_openapi_json_disponivel PASSED    [100%]
+
+================================ 50 passed in 2.34s ==================================
+```
+
+### 2.3. Executar Testes Específicos
+
+```bash
+# Testar apenas endpoints de conhecimento
+pytest backend/test_api.py::TestEndpointBaseDeConhecimento -v
+
+# Testar apenas validações Pydantic
+pytest backend/test_api.py -k "validacao" -v
+
+# Parar no primeiro erro
+pytest backend/test_api.py -x
+
+# Mostrar saída detalhada
+pytest backend/test_api.py -vv
+```
+
+### 2.4. Cobertura de Testes
+
+Os testes cobrem:
+
+- ✓ 4 testes do endpoint raiz
+- ✓ 11 testes de base de conhecimento
+- ✓ 9 testes de prompts
+- ✓ 7 testes de histórico de prática
+- ✓ 8 testes de frases do diálogo
+- ✓ 4 testes de integração
+- ✓ 2 testes de tratamento de erros
+- ✓ 2 testes de performance
+- ✓ 3 testes de documentação
+
+**Total: 50+ casos de teste**
+
+### 2.5. Gerar Relatório de Cobertura
+
+```bash
+pip install pytest-cov
+pytest backend/test_api.py --cov=backend --cov-report=html
+```
+
+Abra `htmlcov/index.html` no navegador para ver o relatório.
+
+## PARTE 3: Testes Manuais dos Modelos Pydantic
 
 ### Teste Manual via Python REPL
 
@@ -190,43 +280,73 @@ except ValidationError as e:
     print("✓ Validação funcionou:", e)
 ```
 
-## 3. Testes de Integração
+## PARTE 4: Testes de Integração com Servidor Rodando
 
-### Carregar e Validar Arquivos Reais
+### 4.1. Iniciar o Servidor
 
-```python
-import json
-from backend.models import ConhecimentoIdioma
+Em um terminal, inicie o servidor:
 
-# Carregar arquivo real
-with open('public/[BASE] Conhecimento de idiomas.json', 'r', encoding='utf-8') as f:
-    dados = json.load(f)
-
-# Validar cada item
-for item in dados:
-    conhecimento = ConhecimentoIdioma(**item)
-    print(f"✓ {conhecimento.texto_original}")
+```bash
+python backend/main.py
 ```
 
-### Validação Programática
-
-```python
-from backend.validator import ValidadorJSON
-
-validador = ValidadorJSON(pasta_public="public")
-
-# Validar arquivo específico
-resultado = validador.validar_conhecimento_idiomas()
-print(f"Válido: {resultado.valido}")
-if not resultado.valido:
-    for erro in resultado.erros:
-        print(f"  - {erro}")
-
-# Validar todos
-sucesso = validador.validar_todos()
+Aguarde a mensagem:
+```
+INFO:     Uvicorn running on http://0.0.0.0:4010
 ```
 
-## 4. Testes de Casos Especiais
+### 4.2. Testar Endpoints no Navegador
+
+Abra no navegador:
+
+1. http://localhost:4010/ - Informações da API
+2. http://localhost:4010/api/base_de_conhecimento - Conhecimentos
+3. http://localhost:4010/api/prompts - Prompts
+4. http://localhost:4010/api/historico_de_pratica - Histórico
+5. http://localhost:4010/api/frases_do_dialogo - Frases
+
+### 4.3. Testar com curl
+
+```bash
+curl http://localhost:4010/api/base_de_conhecimento
+curl http://localhost:4010/api/prompts
+curl http://localhost:4010/api/historico_de_pratica
+curl http://localhost:4010/api/frases_do_dialogo
+```
+
+### 4.4. Testar com Python
+
+```python
+import requests
+
+# Testar endpoint
+response = requests.get("http://localhost:4010/api/base_de_conhecimento")
+print(f"Status: {response.status_code}")
+print(f"Total de conhecimentos: {len(response.json())}")
+
+# Testar todos os endpoints
+endpoints = [
+    "/",
+    "/api/base_de_conhecimento",
+    "/api/prompts",
+    "/api/historico_de_pratica",
+    "/api/frases_do_dialogo"
+]
+
+for endpoint in endpoints:
+    response = requests.get(f"http://localhost:4010{endpoint}")
+    print(f"✓ {endpoint}: {response.status_code}")
+```
+
+### 4.5. Testar Documentação Interativa
+
+Acesse:
+- **Swagger UI:** http://localhost:4010/docs
+- **ReDoc:** http://localhost:4010/redoc
+
+Na interface Swagger, você pode testar cada endpoint clicando em "Try it out".
+
+## PARTE 5: Testes de Casos Especiais
 
 ### Histórico de Prática Vazio (Opcional)
 
@@ -274,20 +394,45 @@ except ValidationError as e:
     print("✓ Validação de unicidade funcionou")
 ```
 
-## 5. Checklist de Testes
+## PARTE 6: Checklist Completo de Testes
 
-- [ ] Validador executa sem erros
+### Validação de Arquivos
+- [ ] Validador executa sem erros (`python backend/validator.py`)
 - [ ] Todos os 4 arquivos JSON são validados
-- [ ] Modelos Pydantic carregam dados corretamente
-- [ ] Validações de campos obrigatórios funcionam
-- [ ] Validações de enums funcionam
-- [ ] Validações de UUID funcionam
-- [ ] Validações de datetime funcionam
-- [ ] Validações customizadas funcionam (tamanhos, unicidade)
+- [ ] Arquivos obrigatórios existem e não estão vazios
 - [ ] Histórico opcional é tratado corretamente
-- [ ] Erros são reportados claramente
 
-## 6. Solução de Problemas
+### Testes Automatizados
+- [ ] Todos os testes pytest passam (`pytest backend/test_api.py -v`)
+- [ ] 50+ casos de teste executam com sucesso
+- [ ] Nenhum warning ou erro
+- [ ] Cobertura de código > 80%
+
+### Modelos Pydantic
+- [ ] Modelos carregam dados corretamente
+- [ ] Validações de campos obrigatórios funcionam
+- [ ] Validações de enums funcionam (idioma, tipo_conhecimento, etc)
+- [ ] Validações de UUID funcionam
+- [ ] Validações de datetime funcionam (ISO 8601)
+- [ ] Validações customizadas funcionam (tamanhos, unicidade)
+
+### Servidor FastAPI
+- [ ] Servidor inicia sem erros
+- [ ] Porta correta (4010 ou definida em .env)
+- [ ] Endpoint raiz retorna informações
+- [ ] Todos os 4 endpoints de dados funcionam
+- [ ] Documentação Swagger acessível (/docs)
+- [ ] Documentação ReDoc acessível (/redoc)
+- [ ] Erros HTTP são tratados corretamente (404, 422, 500)
+
+### Integração
+- [ ] Endpoints retornam dados válidos
+- [ ] Estrutura JSON está correta
+- [ ] IDs são únicos
+- [ ] Dados passam validação Pydantic
+- [ ] Performance aceitável (< 1s por requisição)
+
+## PARTE 7: Solução de Problemas
 
 ### Erro: ModuleNotFoundError: No module named 'pydantic'
 
@@ -314,24 +459,138 @@ python backend/validator.py
 
 Verifique que está executando a partir da raiz do projeto onde a pasta `public` existe.
 
-## 7. Automação de Testes
+## PARTE 8: Automação de Testes
 
-Para integração contínua, adicione ao seu script de CI/CD:
+### 8.1. Script Completo de Testes
 
-```bash
-# Instalar dependências
-pip install pydantic
+Crie um arquivo `test_all.bat`:
 
-# Executar validação
+```batch
+@echo off
+echo ========================================
+echo   SUITE COMPLETA DE TESTES - BACKEND
+echo ========================================
+echo.
+
+echo [1/3] Validando arquivos JSON...
 python backend/validator.py
-
-# Verificar código de saída
 if %ERRORLEVEL% NEQ 0 (
-    echo Validação falhou!
+    echo FALHOU: Validacao de arquivos
     exit /b 1
 )
+echo.
+
+echo [2/3] Executando testes automatizados...
+pytest backend/test_api.py -v
+if %ERRORLEVEL% NEQ 0 (
+    echo FALHOU: Testes automatizados
+    exit /b 1
+)
+echo.
+
+echo [3/3] Verificando servidor...
+echo Inicie o servidor manualmente e teste os endpoints
+echo.
+
+echo ========================================
+echo   TODOS OS TESTES PASSARAM!
+echo ========================================
+```
+
+### 8.2. Integração Contínua (CI/CD)
+
+Para GitHub Actions, crie `.github/workflows/backend-tests.yml`:
+
+```yaml
+name: Backend Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: pip install -r backend/requirements.txt
+    
+    - name: Validate JSON files
+      run: python backend/validator.py
+    
+    - name: Run API tests
+      run: pytest backend/test_api.py -v
+```
+
+### 8.3. Testes Antes de Commit
+
+Adicione ao `.git/hooks/pre-commit`:
+
+```bash
+#!/bin/sh
+echo "Executando testes antes do commit..."
+python backend/validator.py && pytest backend/test_api.py -q
+```
+
+## PARTE 9: Resumo Rápido
+
+### Teste Rápido (1 minuto)
+
+```bash
+# Validar arquivos
+python backend/validator.py
+
+# Executar testes
+pytest backend/test_api.py -q
+```
+
+### Teste Completo (5 minutos)
+
+```bash
+# 1. Validar arquivos
+python backend/validator.py
+
+# 2. Testes automatizados
+pytest backend/test_api.py -v
+
+# 3. Iniciar servidor
+python backend/main.py
+
+# 4. Em outro terminal, testar endpoints
+curl http://localhost:4010/api/base_de_conhecimento
+```
+
+### Teste com Cobertura (10 minutos)
+
+```bash
+# Validar
+python backend/validator.py
+
+# Testes com cobertura
+pytest backend/test_api.py --cov=backend --cov-report=html -v
+
+# Ver relatório
+start htmlcov/index.html
 ```
 
 ## Conclusão
 
-Execute regularmente `python backend/validator.py` para garantir que todos os arquivos JSON estão corretos e seguem os schemas definidos.
+Para garantir qualidade do backend:
+
+1. **Sempre** execute `python backend/validator.py` antes de iniciar o servidor
+2. **Regularmente** execute `pytest backend/test_api.py -v` 
+3. **Antes de commits** execute a suite completa de testes
+4. **Mantenha** cobertura de testes acima de 80%
+
+**Comandos essenciais:**
+```bash
+python backend/validator.py          # Validar arquivos JSON
+pytest backend/test_api.py -v        # Testes automatizados
+python backend/main.py               # Iniciar servidor
+```
