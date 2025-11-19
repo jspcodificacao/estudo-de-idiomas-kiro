@@ -136,6 +136,49 @@ def get_base_de_conhecimento():
         )
 
 
+@app.put("/api/base_de_conhecimento", response_model=List[ConhecimentoIdioma])
+def update_base_de_conhecimento(conhecimentos: List[ConhecimentoIdioma]):
+    """
+    Atualiza a base de conhecimento de idiomas.
+    
+    Args:
+        conhecimentos: Lista de conhecimentos validados.
+    
+    Returns:
+        Lista de conhecimentos atualizada.
+    
+    Raises:
+        HTTPException: Se houver erro ao salvar o arquivo.
+    """
+    caminho = PUBLIC_DIR / "[BASE] Conhecimento de idiomas.json"
+    
+    # Validar que não está vazio
+    if not conhecimentos or len(conhecimentos) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Base de conhecimento não pode estar vazia"
+        )
+    
+    # Validar IDs únicos
+    conhecimento_ids = [c.conhecimento_id for c in conhecimentos]
+    if len(conhecimento_ids) != len(set(conhecimento_ids)):
+        raise HTTPException(
+            status_code=400,
+            detail="IDs de conhecimentos devem ser únicos"
+        )
+    
+    # Converter para dict e salvar
+    try:
+        dados = [c.model_dump(mode='json') for c in conhecimentos]
+        salvar_json(caminho, dados)
+        return conhecimentos
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao salvar conhecimentos: {str(e)}"
+        )
+
+
 @app.get("/api/prompts", response_model=ColecaoPrompts)
 def get_prompts():
     """

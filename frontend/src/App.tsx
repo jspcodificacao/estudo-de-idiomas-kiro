@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavegadorHistorico } from './components/NavegadorHistorico'
 import { EditorPrompts } from './components/EditorPrompts'
+import { EditorConhecimento } from './components/EditorConhecimento'
 
 type Funcionalidade = 
   | 'editar-prompts'
@@ -105,6 +106,9 @@ function App() {
         ) : funcionalidadeSelecionada === 'editar-prompts' ? (
           /* Editor de Prompts */
           <EditorPrompts onVoltar={handleVoltar} />
+        ) : funcionalidadeSelecionada === 'mudar-base' ? (
+          /* Editor de Base de Conhecimento */
+          <EditorConhecimento onVoltar={handleVoltar} />
         ) : (
           /* Tela de Funcionalidade Não Implementada */
           <div className="max-w-2xl mx-auto">
