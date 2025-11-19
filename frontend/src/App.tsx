@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavegadorHistorico } from './components/NavegadorHistorico'
 import { EditorPrompts } from './components/EditorPrompts'
 import { EditorConhecimento } from './components/EditorConhecimento'
+import { EditorFrases } from './components/EditorFrases'
 
 type Funcionalidade = 
   | 'editar-prompts'
@@ -109,6 +110,9 @@ function App() {
         ) : funcionalidadeSelecionada === 'mudar-base' ? (
           /* Editor de Base de Conhecimento */
           <EditorConhecimento onVoltar={handleVoltar} />
+        ) : funcionalidadeSelecionada === 'editar-frases' ? (
+          /* Editor de Frases do Diálogo */
+          <EditorFrases onVoltar={handleVoltar} />
         ) : (
           /* Tela de Funcionalidade Não Implementada */
           <div className="max-w-2xl mx-auto">

@@ -324,6 +324,60 @@ def get_frases_do_dialogo():
         )
 
 
+@app.put("/api/frases_do_dialogo", response_model=FrasesDialogo)
+def update_frases_do_dialogo(frases: FrasesDialogo):
+    """
+    Atualiza as frases do diálogo.
+    
+    Args:
+        frases: Frases do diálogo validadas.
+    
+    Returns:
+        Frases do diálogo atualizadas.
+    
+    Raises:
+        HTTPException: Se houver erro ao salvar o arquivo.
+    """
+    caminho = PUBLIC_DIR / "[BASE] Frases do Diálogo.json"
+    
+    # Validar que campos obrigatórios não estão vazios
+    if not frases.saudacao or not frases.saudacao.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Saudação não pode estar vazia"
+        )
+    
+    if not frases.despedida or not frases.despedida.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Despedida não pode estar vazia"
+        )
+    
+    if not frases.intermediarias or len(frases.intermediarias) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Deve haver pelo menos uma frase intermediária"
+        )
+    
+    # Validar que frases intermediárias não estão vazias
+    if any(not f or not f.strip() for f in frases.intermediarias):
+        raise HTTPException(
+            status_code=400,
+            detail="Frases intermediárias não podem estar vazias"
+        )
+    
+    # Converter para dict e salvar
+    try:
+        dados = frases.model_dump(mode='json')
+        salvar_json(caminho, dados)
+        return frases
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao salvar frases: {str(e)}"
+        )
+
+
 if __name__ == "__main__":
     import uvicorn
     
