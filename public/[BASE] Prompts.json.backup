@@ -79,6 +79,17 @@
         ]
       },
       "ultima_edicao": "2025-11-10T11:05:00Z"
+    },
+    {
+      "prompt_id": "teste_api_v1",
+      "descricao": "Prompt de teste criado via API",
+      "template": "Este é um teste com parâmetro {{teste}}",
+      "parametros": [
+        "teste"
+      ],
+      "resposta_estruturada": false,
+      "estrutura_esperada": null,
+      "ultima_edicao": "2025-11-19T12:00:00Z"
     }
   ]
 }

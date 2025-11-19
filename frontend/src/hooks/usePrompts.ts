@@ -51,15 +51,28 @@ export function usePrompts(): UsePromptsReturn {
         data_atualizacao: new Date().toISOString()
       };
 
-      // TODO: Implementar endpoint PUT/POST no backend
-      // Por enquanto, apenas atualiza localmente
-      setColecao(novaColecao);
-      setPrompts(novosPrompts);
+      // Enviar para o backend
+      const response = await fetch(`${BACKEND_URL}/api/prompts`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(novaColecao)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Erro ao salvar: ${response.statusText}`);
+      }
+
+      const colecaoAtualizada: ColecaoPrompts = await response.json();
+      setColecao(colecaoAtualizada);
+      setPrompts(colecaoAtualizada.prompts);
       
-      console.log('Prompts atualizados (local):', novaColecao);
       return true;
     } catch (err) {
       console.error('Erro ao salvar prompts:', err);
+      setError(err instanceof Error ? err.message : 'Erro ao salvar prompts');
       return false;
     }
   };

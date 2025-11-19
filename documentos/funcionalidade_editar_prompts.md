@@ -178,7 +178,7 @@ GET /api/prompts
 }
 ```
 
-### Endpoint de Escrita (TODO)
+### Endpoint de Escrita
 ```
 PUT /api/prompts
 ```
@@ -193,7 +193,25 @@ PUT /api/prompts
 }
 ```
 
-**Nota:** Atualmente, as alterações são salvas apenas localmente. O endpoint de escrita precisa ser implementado no backend.
+**Resposta:**
+```json
+{
+  "descricao": "...",
+  "data_atualizacao": "...",
+  "marcador_de_paramentros": "...",
+  "prompts": [...]
+}
+```
+
+**Validações:**
+- Coleção não pode estar vazia
+- IDs de prompts devem ser únicos
+- Todos os campos obrigatórios devem estar presentes
+
+**Segurança:**
+- Backup automático antes de salvar
+- Validação com Pydantic
+- CORS configurado
 
 ## Exemplo de Uso
 
@@ -250,8 +268,25 @@ PUT /api/prompts
 - Cores contrastantes
 - Navegação por teclado
 
+## Segurança e Backup
+
+### Sistema de Backup Automático
+- Antes de cada salvamento, um backup é criado
+- Arquivo de backup: `[BASE] Prompts.json.backup`
+- Permite recuperação em caso de erro
+
+### Validações no Backend
+- Validação de schema com Pydantic
+- Verificação de IDs únicos
+- Validação de campos obrigatórios
+- Tratamento de erros robusto
+
+### CORS
+- Configurado para aceitar requisições do frontend
+- Em produção, deve ser restrito a origens específicas
+
 ---
 
 **Implementado em**: 2025-11-19  
 **Versão**: 1.0.0  
-**Status**: Funcional (persistência local apenas)
+**Status**: Funcional (persistência completa com backup)

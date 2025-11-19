@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import List
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 from dotenv import load_dotenv
 
@@ -23,13 +24,23 @@ load_dotenv()
 
 # Configuração
 BACKEND_PORT = int(os.getenv("BACKEND_PORT", 4010))
-PUBLIC_DIR = Path("public")
+# PUBLIC_DIR deve apontar para a pasta public na raiz do projeto
+PUBLIC_DIR = Path(__file__).parent.parent / "public"
 
 # Criar aplicação FastAPI
 app = FastAPI(
     title="API de Estudo de Idiomas",
     description="API para gerenciar conhecimentos, prompts, histórico e diálogos",
     version="1.0.0"
+)
+
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Em produção, especificar origens permitidas
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -52,6 +63,29 @@ def carregar_json(caminho: Path):
         raise HTTPException(
             status_code=500,
             detail=f"Erro ao ler arquivo: {str(e)}"
+        )
+
+
+def salvar_json(caminho: Path, dados: dict):
+    """Salva dados em um arquivo JSON."""
+    try:
+        # Criar backup antes de salvar
+        if caminho.exists():
+            backup_path = caminho.with_suffix('.json.backup')
+            with open(caminho, 'r', encoding='utf-8') as f:
+                backup_data = f.read()
+            with open(backup_path, 'w', encoding='utf-8') as f:
+                f.write(backup_data)
+        
+        # Salvar novos dados
+        with open(caminho, 'w', encoding='utf-8') as f:
+            json.dump(dados, f, ensure_ascii=False, indent=2)
+        
+        return True
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao salvar arquivo: {str(e)}"
         )
 
 
@@ -131,6 +165,49 @@ def get_prompts():
         raise HTTPException(
             status_code=422,
             detail=f"Erro de validação: {e.errors()}"
+        )
+
+
+@app.put("/api/prompts", response_model=ColecaoPrompts)
+def update_prompts(colecao: ColecaoPrompts):
+    """
+    Atualiza a coleção de prompts.
+    
+    Args:
+        colecao: Nova coleção de prompts validada.
+    
+    Returns:
+        Coleção de prompts atualizada.
+    
+    Raises:
+        HTTPException: Se houver erro ao salvar o arquivo.
+    """
+    caminho = PUBLIC_DIR / "[BASE] Prompts.json"
+    
+    # Validar que não está vazio
+    if not colecao.prompts or len(colecao.prompts) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Coleção de prompts não pode estar vazia"
+        )
+    
+    # Validar IDs únicos
+    prompt_ids = [p.prompt_id for p in colecao.prompts]
+    if len(prompt_ids) != len(set(prompt_ids)):
+        raise HTTPException(
+            status_code=400,
+            detail="IDs de prompts devem ser únicos"
+        )
+    
+    # Converter para dict e salvar
+    try:
+        dados = colecao.model_dump(mode='json')
+        salvar_json(caminho, dados)
+        return colecao
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao salvar prompts: {str(e)}"
         )
 
 
